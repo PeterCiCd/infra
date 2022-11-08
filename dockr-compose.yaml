@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    user: root
+    ports:
+      - 8080:8080
+      - 50000:50000
+    container_name: jenkins
+    volumes:
+      - '$JENKINS_HOME/data:/var/jenkins_home'
+      - '//var/run/docker.sock:/var/run/docker.sock'
+    restart: always
+    networks:
+      - cicd-net
+
+  mvn_agent:
+    image: jenkins/jnlp-agent-maven:jdk11
+    user: root
+    privileged: true
+    container_name: mvn_agent
+    command: -url http://jenkins:8080 $TOKEN  $AGENT_NAME
+    expose:
+      - 22
+    volumes:
+      - '$JENKINS_HOME/mvn_agent:/var/jenkins_home'
+      - '//var/run/docker.sock:/var/run/docker.sock'
+    environment:
+      - JENKINS_AGENT_WORKDIR=/home/projectname-ci/
+    depends_on:
+      - 'jenkins'
+    networks:
+      - cicd-net
+
+  nexus:
+    image: sonatype/nexus3
+    container_name: nexus
+    ports:
+      - 8081:8081
+      - 5000:5000
+    volumes:
+      - '$NEXUS_HOME:/nexus-data'
+    networks:
+      - cicd-net
+
+volumes:
+  nexus-data:
+
+networks:
+  cicd-net:
+    driver: bridge
